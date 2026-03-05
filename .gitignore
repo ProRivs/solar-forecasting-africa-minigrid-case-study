@@ -1,0 +1,19 @@
+# Virtual Environments
+venv/
+.venv/
+env/
+bin/
+lib/
+include/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Distribution / Build
+dist/
+build/
+*.egg-info/ 
