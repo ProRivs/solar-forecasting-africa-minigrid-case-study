@@ -15,13 +15,13 @@ class SiteConfig:
 @dataclass(frozen=True)
 class PVConfig:
     pv_ac_rated_kw: float = 100.0       # inverter AC rating    
-    pv_dc_kw: float = 120.0             # # DC array (DC/AC=1.2 typical)
     dc_ac_ratio: float = 1.2            # aka inverter loading ratio or ILR
-    
+    pv_dc_kw: float = 120.0             # # DC array (DC/AC=1.2 typical)
+
     tilt_deg: float = 12.0              # simple Sahel-like fixed tilt (10-15°) assumption
     azimuth_deg: float = 180.0          # south-facing
-    
-    # Aggregate losses 14% => keep 0.86 net factor
+
+    # Aggregate losses = 14% => keep 0.86 net factor
     loss_factor: float = 0.86
     
 @dataclass(frozen=True)
