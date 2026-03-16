@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minigrid_case_study"
+version = "0.1.0"
+description = "Solar Forecasting and Mini-grid Simulation for Maroua"
+dependencies = [
+    "pandas",
+    "numpy",
+    "pvlib",
+    "matplotlib"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

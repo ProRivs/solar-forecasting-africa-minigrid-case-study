@@ -52,12 +52,11 @@ def pv_ac_power_series(
 
     # NASA POWER hourly ALLSKY_SFC_SW_DWN is Wh/m² over the hour.
     # For hourly modeling, we treat it as average W/m² during that hour.
-    ghi = df[ghi_col].astype(float).clip(lower=0)
+    ghi = pd.Series(df[ghi_col].astype(float).values, index=times).clip(lower=0)
     
 
     # Ambient temperature
-    ghi = df[ghi_col].astype(float).clip(lower=0)
-    temp_air = df[temp_col].astype(float)
+    temp_air = pd.Series(df[temp_col].astype(float).values, index=times)
 
     # pvlib site object
     location = pvlib.location.Location(
@@ -69,8 +68,8 @@ def pv_ac_power_series(
 
     # Solar position
     solpos = location.get_solarposition(times)
-    zenith = solpos["zenith"]
-    azimuth = solpos["azimuth"]
+    zenith = pd.Series(solpos["zenith"].values, index=times)
+    azimuth = pd.Series(solpos["azimuth"].values, index=times)
 
     # DNI estimate from GHI using DISC
     disc_out = pvlib.irradiance.disc(
@@ -81,7 +80,7 @@ def pv_ac_power_series(
     dni = pd.Series(disc_out["dni"], index=times).clip(lower=0)
 
     # Compute DHI from GHI - DNI*cos(zenith), clipped at zero
-    cos_zenith = np.cos(np.radians(zenith)).clip(lower=0)
+    cos_zenith = pd.Series(np.cos(np.radians(zenith)), index=times).clip(lower=0)
     dhi = (ghi - dni * cos_zenith).clip(lower=0)
 
     # POA (Plane-of-array) irradiance
@@ -94,19 +93,25 @@ def pv_ac_power_series(
         ghi=ghi,
         dhi=dhi
     )
-    poa_global = pd.Series(poa["poa_global"], index=times).clip(lower=0)
+    poa_global = pd.Series(poa["poa_global"].values, index=times).clip(lower=0)
 
-    # Cell temperature approximation using SAPM open-rack glass/glass default style
+    # Cell temperature approximation using SAPM parameters
+    # Use a standard open-rack glass/glass parameter set from pvlib
+    temp_params = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS["sapm"]["open_rack_glass_glass"]
+
     temp_cell = pvlib.temperature.sapm_cell(
         poa_global=poa_global,
         temp_air=temp_air,
-        wind_speed=1.0  # simple fixed assumption for baseline case
+        wind_speed=1.0,
+        a=temp_params["a"],
+        b=temp_params["b"],
+        deltaT=temp_params["deltaT"]
     )
 
     # DC power using PVWatts
     # pdc0 = DC nameplate in W
     pdc = pvlib.pvsystem.pvwatts_dc(
-        g_poa_effective=poa_global,
+        effective_irradiance=poa_global,
         temp_cell=temp_cell,
         pdc0=pv.pv_dc_kw * 1000.0,
         gamma_pdc=-0.003
