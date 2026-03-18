@@ -36,13 +36,15 @@ def simulate_minigrid(
     Returns
     -------
     pd.DataFrame
-        Simulation outputs:
+        Simulation outputs including:
         - pv_ac_kw
         - load_kw
         - served_load_kw
         - unserved_load_kw
         - curtailed_pv_kw
         - soc
+        - charge_kw
+        - discharge_kw
         - battery_throughput_kwh
     """
     times = pd.DatetimeIndex(df["time"])
@@ -72,6 +74,8 @@ def simulate_minigrid(
     out["unserved_load_kw"] = batt_df["unserved_load_kw"]
     out["curtailed_pv_kw"] = batt_df["curtailed_pv_kw"]
     out["soc"] = batt_df["soc"]
+    out["charge_kw"] = batt_df["charge_kw"]
+    out["discharge_kw"] = batt_df["discharge_kw"]
     out["battery_throughput_kwh"] = batt_df["battery_throughput_kwh"]
 
     out.index.name = "time"

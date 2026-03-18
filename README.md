@@ -74,6 +74,12 @@ peri-urban demand pattern with morning activity, moderate daytime
 commercial demand, and a strong evening peak.
 
 PV production is derived from NASA POWER irradiance using a simplified
-pvlib pipeline intended for reproducible stress-testing rather than
+pvlib/PVWatts pipeline intended for reproducible stress-testing rather than
 plant-grade PV performance modeling.
 
+Sanity checks confirm:
+- near-zero output at night
+- peak generation around solar noon
+- realistic deviation between forecast-based and actual PV profiles
+
+These deviations are intentionally preserved to evaluate their impact on mini-grid operation.
