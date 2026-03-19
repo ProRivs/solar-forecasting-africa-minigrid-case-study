@@ -130,5 +130,8 @@ def pv_ac_power_series(
     pac_kw = pd.Series(pac, index=times) / 1000.0
     pac_kw = pac_kw.clip(lower=0, upper=pv.pv_ac_rated_kw)
 
+    # Force PV output to zero when sun is below horizon
+    pac_kw = pac_kw.where(zenith < 90, 0.0)
+
     pac_kw.name = "pv_ac_kw"
     return pac_kw
