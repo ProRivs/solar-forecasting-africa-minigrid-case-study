@@ -10,6 +10,7 @@ Rather than assessing forecast accuracy in isolation, this phase embeds forecast
 
 *This approach reframes forecasting from a prediction task into a system-level risk driver.*
 
+---
 ## 2. System Definition
 A minimal but defensible mini-grid configuration is used:
 
@@ -38,6 +39,7 @@ A minimal but defensible mini-grid configuration is used:
 
 *This profile is not intended to reproduce a measured feeder exactly. It is designed as a reproducible stress-test load for mini-grid analysis.*
 
+---
 ## 3. Data and Inputs
 ### 3.1 Irradiance and Temperature
 - Source: NASA POWER
@@ -57,6 +59,7 @@ A minimal but defensible mini-grid configuration is used:
 
 *This model is designed as a consistent stress-test pipeline, not a plant-grade digital twin.*
 
+----
 ## 4. Scenario Definition
 Two scenarios are simulated:
 
@@ -70,6 +73,7 @@ All other system components remain identical.
 
 *This isolates the effect of forecast uncertainty on system operation*
 
+---
 ## 5. Dispatch Model
 
 Battery dispatch is rule-based:
@@ -82,6 +86,8 @@ Constraints enforced:
 - SoC bounds (10%–90%)
 
 No optimization or look-ahead is used.
+
+---
 
 ## 6. Metrics
 System performance is evaluated using operationally meaningful metrics:
@@ -105,6 +111,7 @@ Difference between Scenario B and Scenario A:
 - ΔCurtailment
 - ΔBattery Throughput
 
+---
 ## 7. Results
 ### 7.1. System-Level Impact (annual metrics)
 Comparison between perfect foresight and forecast-driven operation:
@@ -178,7 +185,7 @@ Between **06:00** and **08:00**, the forecast consistently reduces unserved load
 - Evening Depletion (The "Optimistic Risk"):
 Conversely, during the evening peak (**18:00–20:00**), errors can lead to a deterioration in performance (e.g., **+18.0 kW** deficit at **19:00**). In these instances, an overestimation of late-afternoon sun leads to delayed discharge or aggressive early-evening use, leaving the battery prematurely exhausted before the night load ends.
 
-
+---
 ## 8. What this proves (core contribution)
 This phase demonstrates the full causal chain:
 
@@ -187,6 +194,7 @@ This phase demonstrates the full causal chain:
 And more importantly: 
 > Forecasting is not just about accuracy, it directly affects system operation.
 
+---
 ## 9. Engineering Implications
 ### 9.1 Forecasting is operational, not academic
 
@@ -208,6 +216,7 @@ Because:
 - tight margins
 - immediate consequences
 
+---
 ## 10. Limitations
 ### **Summary of Model Assumptions and Limitations**
 
@@ -226,6 +235,7 @@ The table below outlines the core constraints and baseline assumptions utilized 
 - **Model Complexity:** Linear Regression was chosen to establish a transparent, computationally light baseline before moving to more complex architectures.
 - **Operational Scope:** By excluding battery degradation, the results represent a "Year 1" performance snapshot of the Maroua mini-grid.
 
+---
 ## 11. Conclusion
 Phase 2 demonstrates that solar forecast uncertainty must be evaluated within a system context.
 
@@ -241,6 +251,7 @@ This is particularly relevant for:
 - weak-grid systems
 - high solar penetration environments
 
+---
 ## 12. Next Steps - Phase 3 (Forecast → Grid Decisions)
 Future work will focus on:
 - Map solar forecast error to operational risk and reliability outcomes
@@ -248,4 +259,4 @@ Future work will focus on:
 - Compare baseline and conservative reserve strategies under weak-grid constraints
 - Quantify tradeoffs between reliability improvement and energy efficiency loss
 - Conduct parametric sensitivity analysis (forecast margin, reserve threshold, load profile)
-- Derive practical decision guidelines for mini-grid operators
+Derive practical decision guidelines for mini-grid operators
