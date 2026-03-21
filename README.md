@@ -31,7 +31,7 @@ The core Phase 2 result is the forecast penalty:
 - ΔBatteryThroughput
 
 ## Objective
-This is a stress-test of design and operations under forecast uncertainty.
+The object is to quantify how forecast error translates into output above. This is a stress-test of design and operations under forecast uncertainty.
 
 The goal is not to build a full optimization framework, but to establish a transparent and defensible pipeline linking:
 1. irradiance inputs,
@@ -83,3 +83,19 @@ Sanity checks confirm:
 - realistic deviation between forecast-based and actual PV profiles
 
 These deviations are intentionally preserved to evaluate their impact on mini-grid operation.
+
+### Time Handling
+
+The mini-grid simulation uses NASA POWER’s native hourly LST convention as the internal time basis.
+This avoids sunrise/sunset distortion that can occur if the source timestamps are incorrectly forced into UTC.
+
+## Results: Forecast Impact on Mini-Grid Reliability
+- Forecast-driven operation reduced unserved energy by ~9.5 MWh and loss-of-load hours by 293 hours.
+- Solar curtailment decreased by ~42%, indicating better utilization of available generation.
+- Battery usage increased, highlighting the role of storage in absorbing forecast variability.
+
+Key insight:
+
+> Even simple forecasting models can materially improve reliability in weak-grid systems by altering battery behavior and energy allocation.
+
+The impact is strongest during high-variability periods, confirming that forecast value increases under uncertain operating conditions.

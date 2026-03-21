@@ -11,9 +11,17 @@ def pv_ac_power_series(
     temp_col: str,
     site: SiteConfig,
     pv: PVConfig
-) -> pd.Series:
+) -> pd.Series:    
     """
     Convert hourly GHI and ambient temperature into hourly AC PV power.
+
+    Internal time basis
+    -------------------
+    The input dataframe is expected to use NASA POWER LST as the master hourly index.
+    These timestamps are kept timezone-naive in the wider Phase 2 pipeline.
+
+    For pvlib solar-position calculations only, the LST timestamps are temporarily
+    localized to Africa/Douala so that pvlib has a timezone-aware DatetimeIndex.
 
     Parameters
     ----------
@@ -39,51 +47,63 @@ def pv_ac_power_series(
     Notes
     -----
     - NASA POWER hourly ALLSKY_SFC_SW_DWN is treated as average W/m² during the hour.
-    - DNI is estimated from GHI using the DISC decomposition model. This introduces uncertainty, particularly during cloudy periods.
+    - DNI is estimated from GHI using the DISC decomposition model. This introduces uncertainty, particularly       during cloudy periods.
     - DHI is reconstructed from GHI and DNI as: DHI = GHI - DNI * cos(zenith).
     - A fixed wind speed is used for simple cell temperature estimation.
     - Plane-of-array irradiance is computed using a fixed tilt system.
+    - Aggregate system losses (~14%) are applied.
     
     This is a reproducible PV stress-test pipeline, not a plant-grade digital twin.
     """
 
-    # Shared time index
-    times = pd.DatetimeIndex(df["time"])
+    # --- SAFETY CHECK: enforce expected time basis ---
+    if site.time_basis != "NASA_LST":
+        raise ValueError("pv_model currently assumes NASA LST time basis")
+        
+    # Read time column
+    times_raw = pd.DatetimeIndex(df["time"])
 
-    # NASA POWER hourly ALLSKY_SFC_SW_DWN is Wh/m² over the hour.
-    # For hourly modeling, we treat it as average W/m² during that hour.
-    ghi = pd.Series(df[ghi_col].astype(float).values, index=times).clip(lower=0)
-    
+    # Normalize two parallel versions:
+    # 1) internal naive index for outputs
+    # 2) timezone-aware version for pvlib calculations
+    if times_raw.tz is None:
+        times_lst = times_raw
+        times_pv = times_raw.tz_localize(site.tz_pvlib)
+    else:
+        times_pv = times_raw.tz_convert(site.tz_pvlib)
+        times_lst = pd.DatetimeIndex(times_pv.tz_localize(None))
 
-    # Ambient temperature
-    temp_air = pd.Series(df[temp_col].astype(float).values, index=times)
+    # Use numpy arrays for core calculations
+    ghi = df[ghi_col].astype(float).to_numpy()
+    ghi = np.clip(ghi, 0, None)
 
-    # pvlib site object
+    temp_air = df[temp_col].astype(float).to_numpy()
+
     location = pvlib.location.Location(
         latitude=site.latitude,
         longitude=site.longitude,
-        tz=site.tz_calc,
+        tz=site.tz_pvlib,
         name=site.name
     )
 
     # Solar position
-    solpos = location.get_solarposition(times)
-    zenith = pd.Series(solpos["zenith"].values, index=times)
-    azimuth = pd.Series(solpos["azimuth"].values, index=times)
+    solpos = location.get_solarposition(times_pv)
+    zenith = solpos["zenith"].to_numpy()
+    azimuth = solpos["azimuth"].to_numpy()
 
-    # DNI estimate from GHI using DISC
+    # DISC decomposition
     disc_out = pvlib.irradiance.disc(
         ghi=ghi,
         solar_zenith=zenith,
-        datetime_or_doy=times
+        datetime_or_doy=times_pv
     )
-    dni = pd.Series(disc_out["dni"], index=times).clip(lower=0)
+    dni = np.clip(np.asarray(disc_out["dni"]), 0, None)
 
-    # Compute DHI from GHI - DNI*cos(zenith), clipped at zero
-    cos_zenith = pd.Series(np.cos(np.radians(zenith)), index=times).clip(lower=0)
-    dhi = (ghi - dni * cos_zenith).clip(lower=0)
+    # Reconstruct DHI
+    cos_zenith = np.clip(np.cos(np.radians(zenith)), 0, None)
+    dhi = np.clip(ghi - dni * cos_zenith, 0, None)
 
-    # POA (Plane-of-array) irradiance
+    # Plane-of-array irradiance
     poa = pvlib.irradiance.get_total_irradiance(
         surface_tilt=pv.tilt_deg,
         surface_azimuth=pv.azimuth_deg,
@@ -93,10 +113,9 @@ def pv_ac_power_series(
         ghi=ghi,
         dhi=dhi
     )
-    poa_global = pd.Series(poa["poa_global"].values, index=times).clip(lower=0)
+    poa_global = np.clip(np.asarray(poa["poa_global"]), 0, None)
 
-    # Cell temperature approximation using SAPM parameters
-    # Use a standard open-rack glass/glass parameter set from pvlib
+    # Cell temperature
     temp_params = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS["sapm"]["open_rack_glass_glass"]
 
     temp_cell = pvlib.temperature.sapm_cell(
@@ -108,8 +127,7 @@ def pv_ac_power_series(
         deltaT=temp_params["deltaT"]
     )
 
-    # DC power using PVWatts
-    # pdc0 = DC nameplate in W
+    # PVWatts DC
     pdc = pvlib.pvsystem.pvwatts_dc(
         effective_irradiance=poa_global,
         temp_cell=temp_cell,
@@ -117,21 +135,19 @@ def pv_ac_power_series(
         gamma_pdc=-0.003
     )
 
-    # Apply aggregate system losses consistently at DC stage
+    # Aggregate losses
     pdc = pdc * pv.loss_factor
 
-    # Convert DC to AC using PVWatts inverter model
+    # PVWatts inverter
     pac = pvlib.inverter.pvwatts(
         pdc=pdc,
         pdc0=pv.pv_dc_kw * 1000.0
     )
 
-    # Convert W -> kW and clip to inverter AC rating
-    pac_kw = pd.Series(pac, index=times) / 1000.0
-    pac_kw = pac_kw.clip(lower=0, upper=pv.pv_ac_rated_kw)
+    # W -> kW
+    pac_kw = np.clip(np.asarray(pac) / 1000.0, 0, pv.pv_ac_rated_kw)
 
-    # Force PV output to zero when sun is below horizon
-    pac_kw = pac_kw.where(zenith < 90, 0.0)
+    # Force zero below horizon
+    pac_kw = np.where(zenith < 90, pac_kw, 0.0)
 
-    pac_kw.name = "pv_ac_kw"
-    return pac_kw
+    return pd.Series(pac_kw, index=times_lst, name="pv_ac_kw")

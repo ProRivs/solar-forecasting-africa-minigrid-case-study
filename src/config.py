@@ -6,11 +6,23 @@ class SiteConfig:
     latitude: float = 10.6032
     longitude: float = 14.3226
     
-    # Keep computation coonsistent; use UTC internally.
-    tz_calc: str = "UTC"
-    
-    # For interpretation/plots in Cameroon local time, use Africa/Douala
-    tz_local: str = "Africa/Douala"
+    # Internal data basis
+    time_basis: str = "NASA_LST"
+
+    # Used only where pvlib requires timezone-aware timestamps
+    tz_pvlib: str = "Africa/Douala"
+
+# we can repace the africa/Douala timezone with the one below for more precision
+'''
+    @property
+    def tz_pvlib(self):
+        solar_offset_hours = self.longitude / 15.0
+        solar_offset_seconds = int(round(solar_offset_hours * 3600))
+        return timezone(timedelta(seconds=solar_offset_seconds))
+'''
+     
+    # Optional user-facing display timezone
+    tz_display: str = "Africa/Douala"
     
 @dataclass(frozen=True)
 class PVConfig:

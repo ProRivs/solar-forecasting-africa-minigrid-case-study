@@ -13,9 +13,13 @@ This repository uses two input data streams:
 2. **Forecast irradiance**
    - Source: processed output exported from the Phase 1 baseline forecasting workflow
    - Variable:
-     - `ghi_forecast_wh_m2` → forecasted hourly GHI, Wh/m²
+   - `ghi_forecast_wh_m2` → forecasted hourly GHI, Wh/m²
 
-The Phase 2 workflow combines both inputs on a shared hourly timestamp index.
+The Phase 2 workflow combines both inputs on a shared hourly timestamp index tto have:
+- timestamp
+- ghi_actual_wh_m2
+- ghi_forecast_wh_m2
+- temperature (temp_c)
 
 ---
 
@@ -29,19 +33,14 @@ This location is used as a Sahelian stress-test case for solar variability and o
 
 ---
 
-## Time Handling
-
+## Time Handling/Convention
 ### Computational timezone
-All internal computations are performed using a timezone-aware datetime index in:
+The internal master time basis in this repository is the original NASA POWER hourly **`LST`** convention.
 
-- **UTC**
+Timestamps are kept timezone-naive inside the Phase 2 workflow to preserve consistency with the source irradiance series and the Phase 1 forecast artifact.
 
 ### Local interpretation timezone
-For interpretation and plotting, timestamps may be converted to:
-
-- **Africa/Douala**
-
-This is the correct IANA timezone identifier for Cameroon.
+For pvlib solar-position calculations only, timestamps are temporarily localized to **`Africa/Douala`** so that timezone-aware solar geometry can be computed.
 
 ### Indexing rule
 All time-dependent series must share the same hourly datetime index:
